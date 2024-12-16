@@ -5,6 +5,7 @@
 [![Code Analysis](https://github.com/POV-Ray/povray/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/POV-Ray/povray/actions/workflows/codeql-analysis.yml)
 [![Maintenance Status](https://img.shields.io/maintenance/yes/2024.svg)](README.md "Last edited 2024-11-03")
 
+- [Development Status (November 2024)](#development-status-november-2024)
 - [License](#license)
 - [Forums](#forums)
 - [Bug Reports](#bug-reports)
@@ -18,7 +19,8 @@
 Development Status (November 2024)
 --------------------------------------
 After a long break in releases of 3.8 beta test candidates, development is resuming, though not at the
-pace of past releases. That said, we hope to have a 3.8 release ready before the end of the year.
+pace of past releases. That said, we hope to have a new 3.8 beta ready before the end of the year and
+a final release in Q1 2025.
 
 One impediment we have yet to overcome is code signing for the Windows platform. Currently we have
 no means of doing so as our previous key has expired. The difficulty is both cost and the need for
