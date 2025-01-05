@@ -55,6 +55,7 @@
     <ClCompile Include="..\..\platform\x86\optimizednoise.cpp">
       <Filter>Platform Source\x86</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\platform\windows\syspovfilesystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\platform\x86\cpuid.h">
