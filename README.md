@@ -1,5 +1,17 @@
+This is an unoffical fork with full command line, ini file, and benchmarking support for Microsoft Windows of
+
 [POV-Ray](http://www.povray.org/) - The Persistence of Vision Raytracer
 =======================================================================
+
+- This fork of POV-Ray strives for supporting the same command line arguments in the Microsoft Windows console version as in the unix version.
+- To support flexible installation locations, relative paths for includes and ini files are used. If the POV-Ray Windows console executable is located in a <tt>bin</tt> directory, the presence of <tt>..\include</tt> is checked as a system-wide library path. If the directory name doesn't contain <tt>bin</tt>, <tt>include</tt> is searched in the same path as the executable.
+- Similarly, a system-wide config file is searched in relative paths to the executable in <tt>..\etc\povray.ini</tt> or <tt>etc\povray.ini</tt>, respectively.
+- In line with the unix version, the environment variable <tt>%POVINI%</tt>, the current directory, and the user directory <tt>%USERPROFILE%\\.povray\3.8</tt> are searched in this order for <tt>povray.ini</tt> files and read ahead of the system-wide <tt>etc\povray.ini</tt>.
+- <tt>--benchmark</tt> triggers the rendition of the standard POV-Ray benchmark, where <tt>+wt<i>num</i></tt> controls the number <tt><i>num</i></tt> of threads.
+
+<hr>
+Further information about POV-Ray below:
+<hr>
 
 [![Quick Tests](https://github.com/POV-Ray/povray/actions/workflows/test_build_quick.yml/badge.svg)](https://github.com/POV-Ray/povray/actions/workflows/test_build_quick.yml)
 [![Code Analysis](https://github.com/POV-Ray/povray/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/POV-Ray/povray/actions/workflows/codeql-analysis.yml)
