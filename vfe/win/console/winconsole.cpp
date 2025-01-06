@@ -58,7 +58,17 @@ namespace pov_frontend
 }
 // end of namespace pov_frontend
 
+// Add ini file for parsing, if it exists
+void AddIni(const char *path, vfeRenderOptions &opts) {
+  DWORD dw = GetFileAttributes(path);
 
+  if((dw & FILE_ATTRIBUTE_DIRECTORY) == 0 && dw != INVALID_FILE_ATTRIBUTES) {
+    opts.AddINI (_strdup(path));
+  }
+}
+
+// Determine localation of povray console executable and
+// look for include and povray.ini in relative paths
 #define pmax 32768
 void AddSystemLibraryPathAndIni(vfeRenderOptions &opts)
 {
@@ -147,7 +157,7 @@ void ErrorExit(vfeSession *session)
 // the unix version for a example of a more comprehensive console build.
 int main (int argc, char **argv)
 {
-  char              *s;
+  char              *si,*sh,*s;
   vfeWinSession     *session = new vfeWinSession() ;
   vfeStatusFlags    flags;
   vfeRenderOptions  opts;
@@ -164,6 +174,18 @@ int main (int argc, char **argv)
 
   if (session->Initialize(nullptr, nullptr) != vfeNoError)
     ErrorExit(session);
+
+  // Add ini from %POVINI%
+  if ((si = std::getenv ("POVINI")) != nullptr)
+    AddIni (si, opts);
+  // Add ini from current directory
+  AddIni ("povray.ini", opts);
+  // Add user ini
+  #define xstr(s) STR(s)
+  #define STR(s) #s
+  if ((sh = std::getenv ("USERPROFILE")) != nullptr)
+    AddIni ((std::string(sh)+"\\.povray\\" xstr(POV_RAY_MAJOR_VERSION_INT) "."
+            xstr(POV_RAY_MINOR_VERSION_INT) "\\povray.ini").c_str(), opts);
 
   if ((s = std::getenv ("POVINC")) != nullptr)
     opts.AddLibraryPath (s);
