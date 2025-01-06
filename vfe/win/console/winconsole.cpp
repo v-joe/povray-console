@@ -143,6 +143,49 @@ void PrintStatus (vfeSession *session)
   }
 }
 
+static void PrintVersion(void)
+{
+    // TODO -- GNU/Linux customs would be to print to stdout (among other differences).
+
+    fprintf(stderr,
+        "POV-Ray %s\n\n"
+        "%s\n%s\n%s\n"
+        "%s\n%s\n%s\n\n",
+        POV_RAY_VERSION,
+        DISTRIBUTION_MESSAGE_1, DISTRIBUTION_MESSAGE_2, DISTRIBUTION_MESSAGE_3,
+        POV_RAY_COPYRIGHT, DISCLAIMER_MESSAGE_1, DISCLAIMER_MESSAGE_2
+    );
+    fprintf(stderr,
+        "Built-in features:\n"
+        "  I/O restrictions:          disabled\n"
+        "  X Window display:          disabled\n"
+        "  Supported image formats:   gif tga iff ppm pgm hdr png jpeg tiff openexr\n"
+        "  Unsupported image formats: -\n\n"
+    );
+    fprintf(stderr,
+        "Compilation settings:\n"
+        "  Build architecture:  %s\n"
+        "  Built/Optimized for: %s\n"
+        "  Compiler:            %s\n",
+        POVRAY_PLATFORM_NAME, POV_BUILD_INFO, COMPILER_NAME
+    );
+}
+
+static void PrintGeneration(void)
+{
+    printf("%s\n", POV_RAY_GENERATION POV_RAY_BETA_SUFFIX);
+}
+
+static void PrintHelp(void)
+{
+    fprintf(stderr, "Platform specific command line options:\n\n"
+        "  'general' options:\n\n"
+        "    --version|-version|--V          display program version\n"
+        "    --help|-help|-h|-?              display usage information\n"
+        "    --generation                    display program generation (short version number)\n"
+        "    --benchmark|-benchmark          run the standard POV-Ray benchmark\n\n");
+}
+
 void ErrorExit(vfeSession *session)
 {
   fprintf (stderr, "%s\n", session->GetErrorString());
@@ -162,6 +205,7 @@ int main (int argc, char **argv)
   vfeStatusFlags    flags;
   vfeRenderOptions  opts;
 
+  /*
   fprintf(stderr,
           "This is an example of a minimal console build of POV-Ray under Windows.\n\n"
           "Persistence of Vision(tm) Ray Tracer Version " POV_RAY_VERSION_INFO ".\n"
@@ -171,6 +215,32 @@ int main (int argc, char **argv)
           POV_RAY_COPYRIGHT "\n"
           DISCLAIMER_MESSAGE_1 "\n"
           DISCLAIMER_MESSAGE_2 "\n\n");
+  */
+
+  if(argc > 1) {
+    if (!(strcmp(argv[1], "--version")
+       && strcmp(argv[1], "-version")
+       && strcmp(argv[1], "-V"))) {
+      PrintVersion();
+      return 0;
+    }
+    else if (!strcmp(argv[1], "--generation")) {
+      PrintGeneration();
+      return 0;
+    }
+    else if (!(strcmp(argv[1], "--help")
+            && strcmp(argv[1], "-help")
+            && strcmp(argv[1], "-h")
+            && strcmp(argv[1], "-?"))) {
+      if (session->Initialize(nullptr, nullptr) == vfeNoError) {
+        session->Shutdown();
+        PrintStatus (session);
+        delete session;
+      }
+      PrintHelp();
+      return 0;
+    }
+  }
 
   if (session->Initialize(nullptr, nullptr) != vfeNoError)
     ErrorExit(session);
