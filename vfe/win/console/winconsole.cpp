@@ -38,12 +38,18 @@
 #include "base/version_info.h"
 
 #include "backend/povray.h"
+#include "backend/control/benchmark.h"
 
 #include "vfe.h"
+
+#include <boost/algorithm/string.hpp>
 
 #ifndef _CONSOLE
 #error "You must define _CONSOLE in windows/povconfig/syspovconfig.h prior to building the console version, otherwise you will get link errors."
 #endif
+
+#define xstr(s) STR(s)
+#define STR(s) #s
 
 using namespace vfe;
 using namespace vfePlatform;
@@ -69,8 +75,9 @@ void AddIni(const char *path, vfeRenderOptions &opts) {
 
 // Determine localation of povray console executable and
 // look for include and povray.ini in relative paths
+// If in benchmark mode, don't parse povray.ini
 #define pmax 32768
-void AddSystemLibraryPathAndIni(vfeRenderOptions &opts)
+void AddSystemLibraryPathAndIni(vfeRenderOptions &opts, bool benchmark)
 {
   // +14 to be sure to be able to append "etc\povray.ini" (or "include")
   char path[pmax+14];
@@ -103,13 +110,16 @@ void AddSystemLibraryPathAndIni(vfeRenderOptions &opts)
       if (path[0] != '\\') return;
     }
 
-    strcpy(path + i + 1, "etc\\povray.ini");
-    // If the determined path+\etc\povray.ini is a file, add it for parsing
-    j = GetFileAttributes(path);
-    if((j & FILE_ATTRIBUTE_DIRECTORY) == 0 && j != INVALID_FILE_ATTRIBUTES)
+    if(!benchmark)
     {
-      static std::string inipath(path);
-      opts.AddINI (inipath);
+      strcpy(path + i + 1, "etc\\povray.ini");
+      // If the determined path+\etc\povray.ini is a file, add it for parsing
+      j = GetFileAttributes(path);
+      if((j & FILE_ATTRIBUTE_DIRECTORY) == 0 && j != INVALID_FILE_ATTRIBUTES)
+      {
+        static std::string inipath(path);
+        opts.AddINI (inipath);
+      }
     }
 
     strcpy(path + i + 1, "include");
@@ -141,6 +151,34 @@ void PrintStatus (vfeSession *session)
       fprintf (stderr, "%s\r", str.c_str());
     lastType = type;
   }
+}
+
+void PrepareBenchmark(vfeRenderOptions &opts, std::string pov, std::string ini)
+{
+  char path[pmax], tmp[pmax];
+
+  if(!GetTempPathA(pmax, path))
+  {
+    path[0] = '.';
+    path[1] = 0;
+  }
+
+  if(!GetTempFileNameA(path, "pov", 0, tmp)) {
+    fprintf(stderr, "Cannot create temporary .pov source for benchmarking.\n");
+    exit(1);
+  }
+  pov = std::string(tmp);
+  ini = pov + ".ini";
+
+  pov::Write_Benchmark_File(tmp, ini.c_str());
+  opts.AddINI(ini);
+  opts.SetSourceFile(pov);
+}
+
+void CleanBenchmark(std::string pov, std::string ini)
+{
+  remove(ini.c_str());
+  remove(pov.c_str());
 }
 
 static void PrintVersion(void)
@@ -204,6 +242,8 @@ int main (int argc, char **argv)
   vfeWinSession     *session = new vfeWinSession() ;
   vfeStatusFlags    flags;
   vfeRenderOptions  opts;
+  bool              dobenchmark = false;
+  std::string       benchpov, benchini;
 
   /*
   fprintf(stderr,
@@ -241,28 +281,83 @@ int main (int argc, char **argv)
       return 0;
     }
   }
+  for(int i = 0; i < argc; i++)
+  {
+    if(!(strcmp(argv[i], "--benchmark") && strcmp(argv[i], "-benchmark"))) {
+      dobenchmark = true;
+      break;
+    }
+  }
 
   if (session->Initialize(nullptr, nullptr) != vfeNoError)
     ErrorExit(session);
 
-  // Add ini from %POVINI%
-  if ((si = std::getenv ("POVINI")) != nullptr)
-    AddIni (si, opts);
-  // Add ini from current directory
-  AddIni ("povray.ini", opts);
-  // Add user ini
-  #define xstr(s) STR(s)
-  #define STR(s) #s
-  if ((sh = std::getenv ("USERPROFILE")) != nullptr)
-    AddIni ((std::string(sh)+"\\.povray\\" xstr(POV_RAY_MAJOR_VERSION_INT) "."
-            xstr(POV_RAY_MINOR_VERSION_INT) "\\povray.ini").c_str(), opts);
+  if (!dobenchmark)
+  {
+    // Add ini from %POVINI%
+    if ((si = std::getenv ("POVINI")) != nullptr)
+      AddIni (si, opts);
+    // Add ini from current directory
+    AddIni ("povray.ini", opts);
+    // Add user ini
+    if ((sh = std::getenv ("USERPROFILE")) != nullptr)
+      AddIni ((std::string(sh)+"\\.povray\\" xstr(POV_RAY_MAJOR_VERSION_INT) "."
+              xstr(POV_RAY_MINOR_VERSION_INT) "\\povray.ini").c_str(), opts);
 
-  if ((s = std::getenv ("POVINC")) != nullptr)
-    opts.AddLibraryPath (s);
-  while (*++argv)
-    opts.AddCommand (*argv);
+    if ((s = std::getenv ("POVINC")) != nullptr)
+      opts.AddLibraryPath (s);
+    while (*++argv)
+      opts.AddCommand (*argv);
 
-  AddSystemLibraryPathAndIni(opts);
+    AddSystemLibraryPathAndIni(opts, false);
+  }
+  else
+  {
+    // parse parameters for benchmarking
+    while (*++argv)
+    {
+      std::string s = std::string(*argv);
+      boost::to_lower(s);
+      // only parse number of threads or library paths
+      if (boost::starts_with(s, "+wt") || boost::starts_with(s, "-wt"))
+      {
+          s.erase(0, 3);
+          int n = std::atoi(s.c_str());
+          if (n)
+              opts.SetThreadCount(n);
+          else
+              fprintf(stderr, "POV-Ray: ignoring malformed '%s' command-line option\n", *argv);
+      }
+      else if (boost::starts_with(s, "+l") || boost::starts_with(s, "-l"))
+      {
+          s.erase(0, 2);
+          opts.AddLibraryPath(s);
+      }
+    }
+    AddSystemLibraryPathAndIni(opts, true);
+
+    int benchversion = pov::Get_Benchmark_Version();
+    fprintf(stderr, "\
+POV-Ray %s\n\n\
+Entering the standard POV-Ray %s benchmark version %x.%02x.\n\n\
+This built-in benchmark requires POV-Ray to be installed on your system\n\
+before running it.  There will be neither display nor file output, and\n\
+any additional command-line option except setting the number of render\n\
+threads (+wtN for N threads) and library paths (+Lpath) will be ignored.\n\
+To get an accurate benchmark result you might consider running POV-Ray\n\
+with the Unix 'time' command (e.g. 'time povray -benchmark').\n\n\
+The benchmark will run using %d render thread(s).\n\
+Press <Enter> to continue or <Ctrl-C> to abort.\n\
+",
+        POV_RAY_VERSION_INFO,
+        xstr(POV_RAY_MAJOR_VERSION_INT) "." xstr(POV_RAY_MINOR_VERSION_INT),
+        benchversion / 256, benchversion % 256,
+        opts.GetThreadCount()
+    );
+    fflush(stderr);
+    getchar();
+    PrepareBenchmark(opts, benchpov, benchini);
+  }
 
   if (session->SetOptions(opts) != vfeNoError)
     ErrorExit(session);
@@ -275,6 +370,8 @@ int main (int argc, char **argv)
   session->Shutdown() ;
   PrintStatus (session) ;
   delete session;
+
+  if (dobenchmark) CleanBenchmark(benchpov, benchini);
 
   if (pauseWhenDone)
   {
