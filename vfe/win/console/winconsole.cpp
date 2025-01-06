@@ -59,6 +59,60 @@ namespace pov_frontend
 // end of namespace pov_frontend
 
 
+#define pmax 32768
+void AddSystemLibraryPathAndIni(vfeRenderOptions &opts)
+{
+  // +14 to be sure to be able to append "etc\povray.ini" (or "include")
+  char path[pmax+14];
+  DWORD len,i,j;
+
+  // Get path of povray console executable
+  if (len = GetModuleFileNameA(NULL, path, pmax))
+  {
+    i = len - 1;
+    for (; i >= 0 && path[i] != '\\'; i--);
+    if (i > 0)
+    {
+      j = i - 1;
+      for (; j >= 0 && path[j] != '\\'; j--);
+      if (path[j] == '\\')
+      {
+        // If povray console executable is in bin* subdirectory,
+        // check for ..\include as library path
+        // otherwise check for include in same directory
+        if (i - j >= 3
+            && (path[j+1]=='b' || path[j+1]=='B')
+            && (path[j + 2] == 'i' || path[j + 2] == 'I')
+            && (path[j + 3] == 'n' || path[j + 3] == 'N')) i = j;
+      }
+    }
+    else
+    {
+      // Path contains no backslash?
+      // Don't know how to determine installation path in this case
+      if (path[0] != '\\') return;
+    }
+
+    strcpy(path + i + 1, "etc\\povray.ini");
+    // If the determined path+\etc\povray.ini is a file, add it for parsing
+    j = GetFileAttributes(path);
+    if((j & FILE_ATTRIBUTE_DIRECTORY) == 0 && j != INVALID_FILE_ATTRIBUTES)
+    {
+      static std::string inipath(path);
+      opts.AddINI (inipath);
+    }
+
+    strcpy(path + i + 1, "include");
+    // If the determined path+\include is a directory, add it to library search path
+    j = GetFileAttributes(path);
+    if((j & FILE_ATTRIBUTE_DIRECTORY) != 0 && j != INVALID_FILE_ATTRIBUTES)
+    {
+      static std::string incpath(path);
+      opts.AddLibraryPath (incpath);
+    }
+  }
+}
+
 void PrintStatus (vfeSession *session)
 {
   std::string str;
@@ -115,6 +169,8 @@ int main (int argc, char **argv)
     opts.AddLibraryPath (s);
   while (*++argv)
     opts.AddCommand (*argv);
+
+  AddSystemLibraryPathAndIni(opts);
 
   if (session->SetOptions(opts) != vfeNoError)
     ErrorExit(session);
