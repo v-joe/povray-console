@@ -10,7 +10,7 @@ This is an unoffical fork with full command line, ini file, and benchmarking sup
 - <tt>--benchmark</tt> triggers the rendition of the standard POV-Ray benchmark, where <tt>+wt<i>num</i></tt> controls the number <tt><i>num</i></tt> of threads.
 
 <hr>
-Further information about POV-Ray below:
+Further information about POV-Ray (from the official repository; note that this fork is unsupported) below:
 <hr>
 
 [![Quick Tests](https://github.com/POV-Ray/povray/actions/workflows/test_build_quick.yml/badge.svg)](https://github.com/POV-Ray/povray/actions/workflows/test_build_quick.yml)
@@ -147,7 +147,7 @@ version, can be found at https://wiki.povray.org.
 Contacting Us
 --------------------------------------
 
-We prefer that you contact us via the forums mentioned at the head of this document.
+We prefer that you contact us (<b>note that this fork is <i>not</i> supported by the POV-Ray team</b>) via the forums mentioned at the head of this document.
 If the matter is one that requires direct email contact (and this generally will NOT
 include tech support requests, though exceptions are made for package maintainers)
 you may use the address listed at the bottom of https://www.povray.org/povlegal.html.
